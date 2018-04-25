@@ -16,7 +16,7 @@ app.layout = html.Div([
         html.Div(dcc.Graph(animate=True, id='graph-2'), className="eight columns"),
         dcc.Interval(
             id='counter',
-                    interval=1*300, # in milliseconds
+                    interval=1*1000, # in milliseconds
                     n_intervals=0
         )        
         

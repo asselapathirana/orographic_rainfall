@@ -31,17 +31,6 @@ app.layout = html.Div([
     )
 ], className="container")
 
-trace = {
-    'mode': 'markers',
-    'marker': {
-        'size': 12,
-        'opacity': 0.5,
-        'line': {
-            'width': 0.5,
-            'color': 'white'
-        }
-    }
-}
 
 #@app.callback(
     #dash.dependencies.Output('graph-1', 'figure'),
@@ -57,10 +46,11 @@ trace = {
         #}
     #}
 
-
-XVALUES = np.arange(0,100,5)
-XVALUES = np.append(XVALUES,[np.NaN,np.NaN])
-LX=len(XVALUES)
+XMAX = 100
+XSTEP = 5
+iVALUES = np.arange(XMAX/XSTEP)
+iVALUES = np.append(iVALUES,[np.NaN,np.NaN])
+LX=len(iVALUES)
 
 @app.callback(
     dash.dependencies.Output('graph-2', 'figure'),
@@ -68,18 +58,49 @@ LX=len(XVALUES)
      ]
 )
 def update_graph_2(counterval):
-    x= XVALUES[counterval % LX]
-    if x:
-        y = [np.sin(x/100.*np.pi)]
-        x = [x]
+    xall= XSTEP*iVALUES[:counterval % LX]
+    yall= 1000/(1+((xall-50.)/20)**2.)
+    if xall[-1]:
+        x = [xall[-1]]
+        y = [yall[-1]]
     else:
         x = []
         y = []
+        xall=[]
+        yall=[]
+    
+    print(x,y, file=sys.stderr)
+    
+    size = [55 if y>500  else 15 for y in yall ]
+        
+    trace1={'mode': 'markers',
+        'marker': {
+            'size': size[-1],
+            'opacity': 1.0,
+            'color' : 'blue',
+            'line': {
+                'width': 0.5,
+                'color': 'blue'
+            }
+        }    
+    }
+    trace2={'mode': 'markers',
+        'marker': {
+            'size': size,
+            'opacity': 0.25,
+            'color' : 'blue',
+            'line': {
+                'width': 0.5,
+                'color': 'white'
+            }
+        }    
+    }    
     return {
-        'data': [dict({'x': x, 'y': y}, **trace)],
+        'data': [dict({'x': x, 'y': y}, **trace1),
+                 dict({'x': xall[:-1], 'y': yall[:-1]}, **trace2)],
         'layout': {
             'xaxis': {'range': [0,100]},
-            'yaxis': {'range': [0,1.1]}
+            'yaxis': {'range': [0,1100]}
         }
     }
 

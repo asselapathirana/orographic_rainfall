@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 import sys
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import math
 
 import numpy as np
 from itertools import cycle
@@ -9,70 +11,85 @@ from itertools import cycle
 app = dash.Dash('Orographic rainfall demo app', static_folder='static')
 server = app.server
 value_range = [-5, 5]
+ANIM_DELTAT = 500
 
-app.layout = html.Div([
+WINDMTRATIO = 2
+WINDMTOFFSET = 1000
+
+XMAX = 100
+XSTEP = 5
+iVALUES = np.arange(0,XMAX/XSTEP) # do one number more than XMAX/XSTEP
+
+app.layout = html.Div([     
+
     html.Div([
         html.Div(dcc.Graph(animate=True, id='graph-1'), className="four columns"),
-        html.Div(dcc.Graph(animate=True, id='graph-2'), className="eight columns"),
+        html.Div(dcc.Graph(animate=False, id='graph-2'), className="eight columns"),
         dcc.Interval(
-            id='counter',
-                    interval=1*1000, # in milliseconds
+            id='ncounter',
+                    interval=ANIM_DELTAT, 
                     n_intervals=0
         )        
         
     ], className="row"),
-    dcc.RangeSlider(
-        id='slider',
-        min=value_range[0],
-        max=value_range[1],
-        step=1,
-        value=[-2, 2],
-        marks={i: i for i in range(value_range[0], value_range[1]+1)}
-    )
+    html.Div(
+        [html.Div('Mountain Height'), 
+         dcc.Slider(id='height', min=0, max=5000, step=500, value=1500, 
+                   marks={i: i for i in range(0,5000+1,1000)}
+        ),
+         ],
+        className="four columns"),
+    html.Div(
+        [html.Div('Humidity (%)'), 
+         dcc.Slider(id='humid', min=0, max=100, step=1, value=50, 
+                   marks={i: i for i in range(0,100+1,10)}
+        ),
+         ],
+        className="four columns"),
+    html.Div(
+        [html.Div('Temperature near surface (°C)'), 
+         dcc.Slider(id='temp', min=0, max=100, step=1, value=50, 
+                   marks={i: i for i in range(0,100+1,10)}
+        ),
+         ],
+        className="four columns", style={"margin-top": "25px"}),
+     
 ], className="container")
 
 
-#@app.callback(
-    #dash.dependencies.Output('graph-1', 'figure'),
-    #[dash.dependencies.Input('slider', 'value')])
-#def update_graph_1(value):
-    #x = np.random.rand(50) 
-    #y = np.random.rand(50) 
-    #return {
-        #'data': [dict({'x': x, 'y': y}, **trace)],
-        #'layout': {
-            #'xaxis': {'range': [np.min(x), np.max(x)]},
-            #'yaxis': {'range': [np.min(y), np.max(y)]}
-        #}
-    #}
+@app.callback(
+    dash.dependencies.Output('ncounter', 'n_intervals'),
+[dash.dependencies.Input('height','value'),
+ dash.dependencies.Input('temp','value'),
+ dash.dependencies.Input('humid','value'),
+ ],    
+)
+def reset_counter(height,temp,humid):
+    # update_graph_2(-1, height, temp, humid)
+    return 0
 
-XMAX = 100
-XSTEP = 5
-iVALUES = np.arange(XMAX/XSTEP)
-iVALUES = np.append(iVALUES,[np.NaN,np.NaN])
-LX=len(iVALUES)
 
 @app.callback(
     dash.dependencies.Output('graph-2', 'figure'),
-    [dash.dependencies.Input('counter', 'n_intervals')
-     ]
+    [dash.dependencies.Input('ncounter', 'n_intervals')
+     ],
+    [dash.dependencies.State('height','value'),
+     dash.dependencies.State('temp','value'),
+     dash.dependencies.State('humid','value'),
+     ],
 )
-def update_graph_2(counterval):
-    xall= XSTEP*iVALUES[:counterval % LX]
+def update_graph_2(counterval, height, temp, humid):
+    
+    length = min([counterval,len(iVALUES)])
+    xall= XSTEP*iVALUES[:1 + (length)]
     yall= 1000/(1+((xall-50.)/20)**2.)
-    if xall[-1]:
-        x = [xall[-1]]
-        y = [yall[-1]]
-    else:
-        x = []
-        y = []
-        xall=[]
-        yall=[]
-    
-    print(x,y, file=sys.stderr)
-    
-    size = [55 if y>500  else 15 for y in yall ]
+    x = [xall[-1]]
+    y = [yall[-1]]    
+    size = [55 if v>500  else 15 for v in yall ]
         
+       
+        
+    
     trace1={'mode': 'markers',
         'marker': {
             'size': size[-1],
@@ -100,7 +117,7 @@ def update_graph_2(counterval):
                  dict({'x': xall[:-1], 'y': yall[:-1]}, **trace2)],
         'layout': {
             'xaxis': {'range': [0,100]},
-            'yaxis': {'range': [0,1100]}
+            'yaxis': {'range': [0,5100]}
         }
     }
 

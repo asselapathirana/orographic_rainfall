@@ -6,19 +6,25 @@ import dash_html_components as html
 import math
 
 import numpy as np
+
+import metpy.calc as mc
+from metpy.units import units
+
 from itertools import cycle
 
 app = dash.Dash('Orographic rainfall demo app', static_folder='static')
 server = app.server
 value_range = [-5, 5]
 ANIM_DELTAT = 500
-MAXMNHT = 5000
+MAXMNHT = 2500
 WINDMTRATIO = 2
 WINDMTOFFSET = 1000
 
 XMAX = 100
 XSTEP = 5
 iVALUES = np.arange(0,XMAX/XSTEP) # do one number more than XMAX/XSTEP
+
+# calculate a pressure profile. 
 
 app.layout = html.Div([     
 
@@ -40,15 +46,15 @@ app.layout = html.Div([
          ],
         className="four columns"),
     html.Div(
-        [html.Div('Humidity (%)'), 
-         dcc.Slider(id='humid', min=0, max=100, step=1, value=50, 
+        [html.Div('Humidity of air (%)'), 
+         dcc.Slider(id='humid', min=0, max=100, step=1, value=40, 
                    marks={i: i for i in range(0,100+1,10)}
         ),
          ],
         className="four columns"),
     html.Div(
-        [html.Div('Temperature near surface (°C)'), 
-         dcc.Slider(id='temp', min=0, max=100, step=1, value=50, 
+        [html.Div('Temperature of air (°C)'), 
+         dcc.Slider(id='temp', min=0, max=100, step=1, value=30, 
                    marks={i: i for i in range(0,100+1,10)}
         ),
          ],
@@ -85,11 +91,20 @@ def update_graph_2(counterval, height, temp, humid):
     yall= wh/(1+((xall-50.)/20)**2.)
     x = [xall[-1]]
     y = [yall[-1]]    
-    size = [55 if v>500  else 15 for v in yall ]
+    
+    temp_ = temp*units.degC
+    initp = mc.height_to_pressure_std(WINDMTOFFSET*units.meters)
+    dewpt = mc.dewpoint_rh(temp_,humid/100.)
+    lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
+       
+    LCL = mc.pressure_to_height_std(lcl_[0])
+    print(humid, lcl_[0], LCL,  file=sys.stderr) 
+    size, symbol = zip(*[ (25, 'star') if v*units.meters>LCL  else (15, 'circle') for v in yall ])
         
     
     trace1={'mode': 'markers',
         'marker': {
+            'symbol': symbol[-1],
             'size': size[-1],
             'opacity': 1.0,
             'color' : 'blue',
@@ -101,6 +116,7 @@ def update_graph_2(counterval, height, temp, humid):
     }
     trace2={'mode': 'markers',
         'marker': {
+            'symbol': symbol,
             'size': size,
             'opacity': 0.25,
             'color' : 'blue',

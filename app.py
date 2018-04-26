@@ -12,7 +12,7 @@ app = dash.Dash('Orographic rainfall demo app', static_folder='static')
 server = app.server
 value_range = [-5, 5]
 ANIM_DELTAT = 500
-
+MAXMNHT = 5000
 WINDMTRATIO = 2
 WINDMTOFFSET = 1000
 
@@ -34,8 +34,8 @@ app.layout = html.Div([
     ], className="row"),
     html.Div(
         [html.Div('Mountain Height'), 
-         dcc.Slider(id='height', min=0, max=5000, step=500, value=1500, 
-                   marks={i: i for i in range(0,5000+1,1000)}
+         dcc.Slider(id='height', min=0, max=MAXMNHT, step=500, value=1500, 
+                   marks={i: i for i in range(0,MAXMNHT+1,1000)}
         ),
          ],
         className="four columns"),
@@ -76,18 +76,16 @@ def reset_counter(height,temp,humid):
     [dash.dependencies.State('height','value'),
      dash.dependencies.State('temp','value'),
      dash.dependencies.State('humid','value'),
-     ],
+     ]
 )
 def update_graph_2(counterval, height, temp, humid):
-    
+    wh = windh(height)
     length = min([counterval,len(iVALUES)])
     xall= XSTEP*iVALUES[:1 + (length)]
-    yall= 1000/(1+((xall-50.)/20)**2.)
+    yall= wh/(1+((xall-50.)/20)**2.)
     x = [xall[-1]]
     y = [yall[-1]]    
     size = [55 if v>500  else 15 for v in yall ]
-        
-       
         
     
     trace1={'mode': 'markers',
@@ -117,10 +115,14 @@ def update_graph_2(counterval, height, temp, humid):
                  dict({'x': xall[:-1], 'y': yall[:-1]}, **trace2)],
         'layout': {
             'xaxis': {'range': [0,100]},
-            'yaxis': {'range': [0,5100]}
+            'yaxis': {'range': [0,1.1*windh(MAXMNHT)]}
         }
     }
 
+def windh(height):
+    return height*WINDMTRATIO+WINDMTOFFSET
+    
+    
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 if __name__ == '__main__':

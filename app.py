@@ -19,11 +19,13 @@ ANIM_DELTAT = 500
 MAXMNHT = 2500
 WINDMTRATIO = 2
 WINDMTOFFSET = 1000
+XPEAK = 50 # x value at which peak occures
+SHAPEFA = 20
 
 XMAX = 100
 XSTEP = 5
-iVALUES = np.arange(0,XMAX/XSTEP) # do one number more than XMAX/XSTEP
-
+XVALUES = np.arange(0,XMAX+.01,XSTEP) # do one number more than XMAX/XSTEP
+MTNX=np.arange(-XMAX*.1,XMAX*1.2,1)
 # calculate a pressure profile. 
 
 app.layout = html.Div([     
@@ -85,21 +87,28 @@ def reset_counter(height,temp,humid):
      ]
 )
 def update_graph_2(counterval, height, temp, humid):
-    wh = windh(height)
-    length = min([counterval,len(iVALUES)])
-    xall= XSTEP*iVALUES[:1 + (length)]
-    yall= wh/(1+((xall-50.)/20)**2.)
-    x = [xall[-1]]
+    length = min([counterval,len(XVALUES)])
+    windx= XVALUES[:length]
+    mtny=windh(MTNX, height, ratio=1, 
+              yoffset=0)
+    yall= windh(windx, height)
+    x = [windx[-1]]
     y = [yall[-1]]    
     
     temp_ = temp*units.degC
     initp = mc.height_to_pressure_std(WINDMTOFFSET*units.meters)
     dewpt = mc.dewpoint_rh(temp_,humid/100.)
     lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
-       
     LCL = mc.pressure_to_height_std(lcl_[0])
+    ## check if LCL is below the top of the wind profile. 
+    #pressures = mc.height_to_pressure_std(yall*units.meters)
+    #if max(mtny) < LCL:
+        #temps = mc.dry_lapse(pressures, temp_)
+    #else:
+        #LCLx=
+        
     print(humid, lcl_[0], LCL,  file=sys.stderr) 
-    size, symbol = zip(*[ (25, 'star') if v*units.meters>LCL  else (15, 'circle') for v in yall ])
+    size, symbol = zip(*[ (25, 'star') if v*units.meters>LCL and x <= XPEAK else (15, 'circle') for x,v in zip(windx,yall) ])
         
     
     trace1={'mode': 'markers',
@@ -125,18 +134,34 @@ def update_graph_2(counterval, height, temp, humid):
                 'color': 'white'
             }
         }    
-    }    
+    } 
+    
+    trace3={#'mode': 'markers',
+        #'marker': {
+        #    'symbol': symbol,
+        #    'size': size,
+        #    'opacity': 0.25,
+        #    'color' : 'blue',
+        #    'line': {
+        #        'width': 0.5,
+        #        'color': 'white'
+        #    }
+        #}    
+        'fill' : 'tozeroy',
+    }     
     return {
         'data': [dict({'x': x, 'y': y}, **trace1),
-                 dict({'x': xall[:-1], 'y': yall[:-1]}, **trace2)],
+                 dict({'x': windx[:-1], 'y': yall}, **trace2),
+                 dict({'x': MTNX, 'y': mtny}, **trace3),
+                 ],
         'layout': {
-            'xaxis': {'range': [0,100]},
-            'yaxis': {'range': [0,1.1*windh(MAXMNHT)]}
+            'xaxis': {'range': [0,XMAX*1.05]},
+            'yaxis': {'range': [0,1.1*windh(0, MAXMNHT,  xoffset=0)]}
         }
     }
 
-def windh(height):
-    return height*WINDMTRATIO+WINDMTOFFSET
+def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WINDMTOFFSET):
+    return maxht*ratio/(1+((xval-xoffset)/div)**2.) + yoffset
     
     
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})

@@ -8,7 +8,7 @@ import math
 import numpy as np
 
 import metpy.calc as mc
-from metpy.units import units
+from metpy.units import units, concatenate
 
 from itertools import cycle
 
@@ -22,11 +22,11 @@ WINDMTOFFSET = 1000
 XPEAK = 50 # x value at which peak occures
 SHAPEFA = 20
 
-XMAX = 100
+XMAX = XPEAK*2 # 
 XSTEP = 5
 XVALUES = np.arange(0,XMAX+.01,XSTEP) # do one number more than XMAX/XSTEP
 MTNX=np.arange(-XMAX*.1,XMAX*1.2,1)
-# calculate a pressure profile. 
+
 
 app.layout = html.Div([     
 
@@ -73,7 +73,6 @@ app.layout = html.Div([
  ],    
 )
 def reset_counter(height,temp,humid):
-    # update_graph_2(-1, height, temp, humid)
     return 0
 
 
@@ -91,9 +90,8 @@ def update_graph_2(counterval, height, temp, humid):
     windx= XVALUES[:length]
     mtny=windh(MTNX, height, ratio=1, 
               yoffset=0)
-    yall= windh(windx, height)
-    x = [windx[-1]]
-    y = [yall[-1]]    
+    windy= windh(windx, height)
+    
     
     temp_ = temp*units.degC
     initp = mc.height_to_pressure_std(WINDMTOFFSET*units.meters)
@@ -101,15 +99,27 @@ def update_graph_2(counterval, height, temp, humid):
     lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
     LCL = mc.pressure_to_height_std(lcl_[0])
     ## check if LCL is below the top of the wind profile. 
-    #pressures = mc.height_to_pressure_std(yall*units.meters)
-    #if max(mtny) < LCL:
-        #temps = mc.dry_lapse(pressures, temp_)
-    #else:
-        #LCLx=
+    pressures = mc.height_to_pressure_std(windy*units.meters)
+    # now calculate the air parcel temperatures
+    if (LCL>=max(windy)*units.meters):
+        T=mc.dry_lapse(pressures, temp_)
+    else:
+        mini=np.argmin(pressures)
+        p1=pressures[:mini]
+        p2=pressures[mini-1:] # with an overlap
         
-    print(humid, lcl_[0], LCL,  file=sys.stderr) 
-    size, symbol = zip(*[ (25, 'star') if v*units.meters>LCL and x <= XPEAK else (15, 'circle') for x,v in zip(windx,yall) ])
+        T1=mc.parcel_profile(p1, temp_, dewpt)
+        dwtop=mc.dewpoint_rh(T1[-1], 1.0) # staurated
+        T2=mc.dry_lapse(p2,T1[-1])
+        T=concatenate((T1,T2[1:]))
         
+
+        
+    print(T,humid, lcl_[0], LCL,  file=sys.stderr) 
+    size, symbol = zip(*[ (25, 'star') if v*units.meters>LCL and x <= XPEAK else (15, 'circle') for x,v in zip(windx,windy) ])
+    
+    x = [windx[-1]]
+    y = [windy[-1]]        
     
     trace1={'mode': 'markers',
         'marker': {
@@ -151,7 +161,7 @@ def update_graph_2(counterval, height, temp, humid):
     }     
     return {
         'data': [dict({'x': x, 'y': y}, **trace1),
-                 dict({'x': windx[:-1], 'y': yall}, **trace2),
+                 dict({'x': windx[:-1], 'y': windy}, **trace2),
                  dict({'x': MTNX, 'y': mtny}, **trace3),
                  ],
         'layout': {
@@ -167,4 +177,6 @@ def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WI
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    #app.run_server(debug=True)
+    #update_graph_2(100, 3.897692586860594*1000, 25, 20)
+    update_graph_2(100, 1500, 25, 50)

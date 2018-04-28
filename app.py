@@ -16,16 +16,16 @@ from itertools import cycle
 app = dash.Dash('Orographic rainfall demo app', static_folder='static')
 server = app.server
 value_range = [-5, 5]
-ANIM_DELTAT = 500
+ANIM_DELTAT = 250
 MAXMNHT = 2500
 WINDMTRATIO = 2
 WINDMTOFFSET = 1000
-XPEAK = 50 # x value at which peak occures
+XPEAK = 100 # x value at which peak occures
 SHAPEFA = 20
 
 XMAX = XPEAK*2 # 
-XSTEP = 5
-XVALUES = np.arange(0,XMAX+.01,XSTEP) # do one number more than XMAX/XSTEP
+XSTEP = 10
+XVALUES = np.append(-99999999,np.arange(0,XMAX+.01,XSTEP),99999999) # do one number more than XMAX/XSTEP then have inf on each side. 
 MTNX=np.arange(-XMAX*.1,XMAX*1.2,1)
 
 
@@ -95,7 +95,7 @@ def update_graph_2(counterval, height, temp, humid):
     
     
     temp_ = temp*units.degC
-    initp = mc.height_to_pressure_std(WINDMTOFFSET*units.meters)
+    initp = mc.height_to_pressure_std(windy[0]*units.meters)
     dewpt = mc.dewpoint_rh(temp_,humid/100.)
     lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
     LCL = mc.pressure_to_height_std(lcl_[0])
@@ -121,15 +121,16 @@ def update_graph_2(counterval, height, temp, humid):
               mc.relative_humidity_from_mixing_ratio(wvmrtop, t, p)
               for t,p in zip(T,pressures)]
 
-        
+    RH=concatenate(RH)
     print(RH, T,humid, lcl_[0], LCL,  file=sys.stderr) 
-    size, symbol = zip(*[ (25, 'star') if v*units.meters>LCL and x <= XPEAK else (15, 'circle') for x,v in zip(windx,windy) ])
     
     x = [windx[-1]]
     y = [windy[-1]]        
     
     TC=T.to("degC")
-    txt=["{:.1f} °C".format(t) for t in TC.magnitude]
+    txt=["{:.1f} °C/ {:.0f} %".format(t,rh*100.) for t,rh in zip(TC.magnitude,RH.magnitude)]
+    size, symbol = zip(*[ (15, 'circle') if v*units.meters<LCL or x > XPEAK else (25, "star") if t>0*units.degC  else (30, 'hexagram') for x,v, t in zip(windx,windy,TC) ])
+    
         
     
     trace1={'mode': 'markers',
@@ -200,6 +201,6 @@ def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WI
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 if __name__ == '__main__':
-    #app.run_server(debug=True)
+    app.run_server(debug=True)
     #update_graph_2(100, 3.897692586860594*1000, 25, 20)
-    update_graph_2(100, 1500, 25, 50)
+    #update_graph_2(100, 1500, 25, 50)

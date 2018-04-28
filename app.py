@@ -121,31 +121,42 @@ def update_graph_2(counterval, height, temp, humid):
     x = [windx[-1]]
     y = [windy[-1]]        
     
+    TC=T.to("degC")
+    txt=["{:.1f} °C".format(t) for t in TC.magnitude]
+        
+    
     trace1={'mode': 'markers',
         'marker': {
             'symbol': symbol[-1],
             'size': size[-1],
             'opacity': 1.0,
-            'color' : 'blue',
+            'color' : TC.magnitude,
+            'colorbar' : 'Hot',
             'line': {
                 'width': 0.5,
                 'color': 'blue'
             }
-        }    
+        },
+        'text': txt,
+        'hoverinfo': 'text',
     }
     trace2={'mode': 'markers',
         'marker': {
             'symbol': symbol,
             'size': size,
             'opacity': 0.25,
-            'color' : 'blue',
+               'color' : TC.magnitude,
+               'colorscale' : 'Hot',
+               'colorbar': {'title':'temp'},
             'line': {
                 'width': 0.5,
-                'color': 'white'
+                'color': 'blue'
             }
-        }    
-    } 
-    
+        },
+        'text': txt,
+        'hoverinfo': 'text',
+        
+    }
     trace3={#'mode': 'markers',
         #'marker': {
         #    'symbol': symbol,
@@ -158,6 +169,7 @@ def update_graph_2(counterval, height, temp, humid):
         #    }
         #}    
         'fill' : 'tozeroy',
+        'hoverinfo' : 'none',
     }     
     return {
         'data': [dict({'x': x, 'y': y}, **trace1),
@@ -177,6 +189,6 @@ def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WI
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 if __name__ == '__main__':
-    #app.run_server(debug=True)
+    app.run_server(debug=True)
     #update_graph_2(100, 3.897692586860594*1000, 25, 20)
-    update_graph_2(100, 1500, 25, 50)
+    #update_graph_2(100, 1500, 25, 50)

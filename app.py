@@ -9,9 +9,56 @@ import math
 import numpy as np
 
 import metpy.calc as mc
-from metpy.units import units, concatenate
+from metpy.units import units, concatenate, check_units
 
 from itertools import cycle
+
+#########################################################################################
+def parcel_profile(pressure, temperature, dewpt):
+    r"""Calculate the profile a parcel takes through the atmosphere.
+
+    The parcel starts at `temperature`, and `dewpt`, lifted up
+    dry adiabatically to the LCL, and then moist adiabatically from there.
+    `pressure` specifies the pressure levels for the profile.
+
+    Parameters
+    ----------
+    pressure : `pint.Quantity`
+        The atmospheric pressure level(s) of interest. The first entry should be the starting
+        point pressure.
+    temperature : `pint.Quantity`
+        The starting temperature
+    dewpt : `pint.Quantity`
+        The starting dew point
+
+    Returns
+    -------
+    `pint.Quantity`
+        The parcel temperatures at the specified pressure levels.
+
+    See Also
+    --------
+    lcl, moist_lapse, dry_lapse
+
+    """
+    # Find the LCL
+    lcl_pressure = mc.lcl(pressure[0], temperature, dewpt)[0].to(pressure.units)
+
+    # Find the dry adiabatic profile, *including* the LCL. We need >= the LCL in case the
+    # LCL is included in the levels. It's slightly redundant in that case, but simplifies
+    # the logic for removing it later.
+    press_lower = concatenate((pressure[pressure >= lcl_pressure], lcl_pressure))
+    t1 = mc.dry_lapse(press_lower, temperature)
+
+    # Find moist pseudo-adiabatic profile starting at the LCL
+    press_upper = concatenate((lcl_pressure, pressure[pressure < lcl_pressure]))
+    t2 = mc.moist_lapse(press_upper, t1[-1]).to(t1.units)
+
+    # Return LCL *without* the LCL point
+    t2_=t2[:-1] if t2.size>1 else t2
+    return concatenate((t1[:-1], t2_))
+
+#########################################################################################
 
 app = dash.Dash('Orographic rainfall demo app', static_folder='static')
 server = app.server
@@ -112,7 +159,7 @@ def update_graph_2(counterval, height, temp, humid):
         mini=np.argmin(pressures)
         p1=pressures[:mini]
         p2=pressures[mini-1:] # with an overlap
-        T1=mc.parcel_profile(p1, temp_, dewpt) # see thero.py 354
+        T1=parcel_profile(p1, temp_, dewpt) # see thero.py 354
         dwtop=mc.dewpoint_rh(T1[-1], 1.0) # staurated
         T2=mc.dry_lapse(p2,T1[-1])
         T=concatenate((T1,T2[1:]))
@@ -201,7 +248,7 @@ def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WI
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 if __name__ == '__main__':
-    #app.run_server(debug=True)
+    app.run_server(debug=True)
     #update_graph_2(100, 3.897692586860594*1000, 25, 20)
     #update_graph_2(100, 1500, 25, 50)
-    update_graph_2(100, 1000, 30, 40)
+    #update_graph_2(100, 1000, 30, 40)

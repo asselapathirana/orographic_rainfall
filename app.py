@@ -104,8 +104,8 @@ app.layout = html.Div([
         className="four columns"),
     html.Div(
         [html.Div('Temperature of air (°C)'), 
-         dcc.Slider(id='temp', min=0, max=100, step=1, value=30, 
-                   marks={i: i for i in range(0,100+1,10)}
+         dcc.Slider(id='temp', min=-20, max=50, step=1, value=30, 
+                   marks={i: i for i in range(-20,50+1,5)}
         ),
          ],
         className="four columns", style={"margin-top": "25px"}),

@@ -112,7 +112,7 @@ def update_graph_2(counterval, height, temp, humid):
         mini=np.argmin(pressures)
         p1=pressures[:mini]
         p2=pressures[mini-1:] # with an overlap
-        T1=mc.parcel_profile(p1, temp_, dewpt)
+        T1=mc.parcel_profile(p1, temp_, dewpt) # see thero.py 354
         dwtop=mc.dewpoint_rh(T1[-1], 1.0) # staurated
         T2=mc.dry_lapse(p2,T1[-1])
         T=concatenate((T1,T2[1:]))

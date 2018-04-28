@@ -105,7 +105,7 @@ def update_graph_2(counterval, height, temp, humid):
     wvmr0 = mc.mixing_ratio_from_relative_humidity(humid/100., temp_, initp)
     
     # now calculate the air parcel temperatures and RH at each position
-    if (LCL>=max(windy)*units.meters):
+    if (lcl_[0]<=min(pressures)):
         T=mc.dry_lapse(pressures, temp_)
         RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, t, p) for t,p in zip(T,pressures)]
     else:
@@ -201,6 +201,7 @@ def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WI
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    #app.run_server(debug=True)
     #update_graph_2(100, 3.897692586860594*1000, 25, 20)
     #update_graph_2(100, 1500, 25, 50)
+    update_graph_2(100, 1000, 30, 40)

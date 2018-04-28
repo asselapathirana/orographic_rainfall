@@ -101,22 +101,28 @@ def update_graph_2(counterval, height, temp, humid):
     LCL = mc.pressure_to_height_std(lcl_[0])
     ## check if LCL is below the top of the wind profile. 
     pressures = mc.height_to_pressure_std(windy*units.meters)
-    # now calculate the air parcel temperatures
+    
+    wvmr0 = mc.mixing_ratio_from_relative_humidity(humid/100., temp_, initp)
+    
+    # now calculate the air parcel temperatures and RH at each position
     if (LCL>=max(windy)*units.meters):
         T=mc.dry_lapse(pressures, temp_)
+        RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, t, p) for t,p in zip(T,pressures)]
     else:
         mini=np.argmin(pressures)
         p1=pressures[:mini]
         p2=pressures[mini-1:] # with an overlap
-        
         T1=mc.parcel_profile(p1, temp_, dewpt)
         dwtop=mc.dewpoint_rh(T1[-1], 1.0) # staurated
         T2=mc.dry_lapse(p2,T1[-1])
         T=concatenate((T1,T2[1:]))
-        
+        wvmrtop = mc.saturation_mixing_ratio(pressures[mini],T[mini])
+        RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, t, p) if p>lcl_[0] else 1.0 if p>=min(pressures) else  
+              mc.relative_humidity_from_mixing_ratio(wvmrtop, t, p)
+              for t,p in zip(T,pressures)]
 
         
-    print(T,humid, lcl_[0], LCL,  file=sys.stderr) 
+    print(RH, T,humid, lcl_[0], LCL,  file=sys.stderr) 
     size, symbol = zip(*[ (25, 'star') if v*units.meters>LCL and x <= XPEAK else (15, 'circle') for x,v in zip(windx,windy) ])
     
     x = [windx[-1]]
@@ -194,6 +200,6 @@ def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WI
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    #app.run_server(debug=True)
     #update_graph_2(100, 3.897692586860594*1000, 25, 20)
-    #update_graph_2(100, 1500, 25, 50)
+    update_graph_2(100, 1500, 25, 50)

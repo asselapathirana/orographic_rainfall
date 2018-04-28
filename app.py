@@ -3,6 +3,7 @@ import sys
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import plotly.graph_objs as go
 import math
 
 import numpy as np
@@ -139,6 +140,7 @@ def update_graph_2(counterval, height, temp, humid):
         },
         'text': txt,
         'hoverinfo': 'text',
+        'showlegend': False,
     }
     trace2={'mode': 'markers',
         'marker': {
@@ -155,6 +157,7 @@ def update_graph_2(counterval, height, temp, humid):
         },
         'text': txt,
         'hoverinfo': 'text',
+        'showlegend': False,
         
     }
     trace3={#'mode': 'markers',
@@ -170,6 +173,8 @@ def update_graph_2(counterval, height, temp, humid):
         #}    
         'fill' : 'tozeroy',
         'hoverinfo' : 'none',
+        'showlegend': False,
+        
     }     
     return {
         'data': [dict({'x': x, 'y': y}, **trace1),
@@ -178,7 +183,7 @@ def update_graph_2(counterval, height, temp, humid):
                  ],
         'layout': {
             'xaxis': {'range': [0,XMAX*1.05]},
-            'yaxis': {'range': [0,1.1*windh(0, MAXMNHT,  xoffset=0)]}
+            'yaxis': {'range': [0,1.1*windh(0, MAXMNHT,  xoffset=0)]},
         }
     }
 

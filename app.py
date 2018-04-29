@@ -5,6 +5,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 import math
+import json
 
 import numpy as np
 
@@ -135,17 +136,42 @@ def reset_counter(height,temp,humid):
      dash.dependencies.State('humid','value'),
      ]
 )
+
 def update_graph_2(counterval, height, temp, humid):
+    st=json.dumps(saveCalc(humid, temp, height))
+    windy, windx, mtny, trace = json.loads(st)
+    
     length = min([counterval,len(XVALUES)])
-    windx, mtny, windy, lcl_, LCL, TC, RH = atmCalc(height, temp, humid)
     x = [windx[length-1]]
-    y = [windy[length-1]]        
-    rhlast=float(RH.magnitude[length-1]*100.)
-    print(rhlast, RH.magnitude[length-1]*100., RH, TC,humid, lcl_[0], LCL,  file=sys.stderr) 
+    y = [windy[length-1]] 
+    
+    return {
+        'data': [dict({'x': windx[:length], 'y': windy[:length]}, **trace[1]),
+                 dict({'x': x, 'y': y}, **trace[0]),  
+                 dict({'x': MTNX, 'y': mtny}, **trace[2]),
+                 ],
+        'layout': {
+            'xaxis': {'range': [0,XMAX*1.05], 'title': 'Distance (km)'},
+            'yaxis': {'range': [0,1.1*windh(0, MAXMNHT,  xoffset=0)], 'title': 'Elevation (m)'},
+            'margin': {
+                'l': 60,
+                'r': 40,
+                'b': 40,
+                't': 10,
+                'pad': 4
+              },             
+        }
+    }
+
+def saveCalc(humid, temp, height):
+    windx, mtny, windy, lcl_, LCL, TC, RH = atmCalc(height, temp, humid)
+           
+    print(RH, TC,humid, lcl_[0], LCL,  file=sys.stderr) 
     txt=["{:.1f} °C/ {:.0f} %".format(t,rh*100.) for t,rh in zip(TC.magnitude,RH.magnitude)]
     size, symbol = zip(*[ (15, 'circle') if v*units.meters<LCL or x > XPEAK else (25, "star") if t>0*units.degC  else (30, 'hexagram') for x,v, t in zip(windx,windy,TC) ])
     colorscale='Viridis'
     
+    trace=[]
     trace1={'mode': 'markers',
             'marker': {
             'size': 40,
@@ -159,7 +185,7 @@ def update_graph_2(counterval, height, temp, humid):
             'symbol': symbol,
             'size': size,
             'opacity': 1.0,
-               'color' : RH.magnitude*100.,
+               'color' : (RH.magnitude*100.).tolist(), # no numpy
                'colorscale' : colorscale,
                'cmin' : 0,
                'cmax' : 100.,
@@ -180,24 +206,10 @@ def update_graph_2(counterval, height, temp, humid):
         'hoverinfo' : 'none',
         'showlegend': False,
         
-    }     
-    return {
-        'data': [dict({'x': windx[:length], 'y': windy[:length]}, **trace2),
-                 dict({'x': x, 'y': y}, **trace1),  
-                 dict({'x': MTNX, 'y': mtny}, **trace3),
-                 ],
-        'layout': {
-            'xaxis': {'range': [0,XMAX*1.05], 'title': 'Distance (km)'},
-            'yaxis': {'range': [0,1.1*windh(0, MAXMNHT,  xoffset=0)], 'title': 'Elevation (m)'},
-            'margin': {
-                'l': 60,
-                'r': 40,
-                'b': 40,
-                't': 10,
-                'pad': 4
-              },             
-        }
-    }
+    }   
+    
+    trace=[trace1, trace2, trace3]
+    return windy.tolist(), windx.tolist(), mtny.tolist(), trace # no numpy
 
 def atmCalc(height, temp, humid):
     windx= XVALUES

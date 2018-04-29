@@ -55,15 +55,17 @@ def parcel_profile(pressure, temperature, dewpt):
     t2 = mc.moist_lapse(press_upper, t1[-1]).to(t1.units)
 
     # Return LCL *without* the LCL point
-    t2_=t2[:-1] if t2.size>1 else t2
-    return concatenate((t1[:-1], t2_))
+    if t2.size>1:
+        return concatenate((t1[:-1], t2[1:]))
+    else:
+        return t1[:-1]
 
 #########################################################################################
 
 app = dash.Dash('Orographic rainfall demo app', static_folder='static')
 server = app.server
 value_range = [-5, 5]
-ANIM_DELTAT = 250
+ANIM_DELTAT = 500
 MAXMNHT = 2500
 WINDMTRATIO = 2
 WINDMTOFFSET = 1000
@@ -164,49 +166,48 @@ def update_graph_2(counterval, height, temp, humid):
         T2=mc.dry_lapse(p2,T1[-1])
         T=concatenate((T1,T2[1:]))
         wvmrtop = mc.saturation_mixing_ratio(pressures[mini],T[mini])
-        RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, t, p) if p>lcl_[0] else 1.0 if p>=min(pressures) else  
-              mc.relative_humidity_from_mixing_ratio(wvmrtop, t, p)
-              for t,p in zip(T,pressures)]
+        
+        RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, *tp) if tp[1]>lcl_[0] and i<=mini else 1.0 if i<mini else  
+              mc.relative_humidity_from_mixing_ratio(wvmrtop, *tp)
+              for i,tp in enumerate(zip(T,pressures))]
 
     RH=concatenate(RH)
-    print(RH, T,humid, lcl_[0], LCL,  file=sys.stderr) 
+    
     
     x = [windx[-1]]
     y = [windy[-1]]        
-    
+    rhlast=float(RH.magnitude[-1]*100.)
     TC=T.to("degC")
+    print(rhlast, RH.magnitude[-1]*100., RH, TC,humid, lcl_[0], LCL,  file=sys.stderr) 
     txt=["{:.1f} °C/ {:.0f} %".format(t,rh*100.) for t,rh in zip(TC.magnitude,RH.magnitude)]
     size, symbol = zip(*[ (15, 'circle') if v*units.meters<LCL or x > XPEAK else (25, "star") if t>0*units.degC  else (30, 'hexagram') for x,v, t in zip(windx,windy,TC) ])
     
         
     
+    colorscale='Viridis'
+    
     trace1={'mode': 'markers',
-        'marker': {
-            'symbol': symbol[-1],
-            'size': size[-1],
-            'opacity': 1.0,
-            'color' : TC.magnitude,
-            'colorbar' : 'Hot',
-            'line': {
-                'width': 0.5,
-                'color': 'blue'
-            }
-        },
-        'text': txt,
-        'hoverinfo': 'text',
-        'showlegend': False,
+            'marker': {
+            'size': 40,
+            'color': 'black',
+            'symbol': 'y-right-open',},
+            'showlegend': False,
+            'hoverinfo' : 'none',
     }
     trace2={'mode': 'markers',
         'marker': {
             'symbol': symbol,
             'size': size,
-            'opacity': 0.25,
-               'color' : TC.magnitude,
-               'colorscale' : 'Hot',
-               'colorbar': {'title':'temp'},
+            'opacity': 1.0,
+               'color' : RH.magnitude*100.,
+               'colorscale' : colorscale,
+               'cmin' : 0,
+               'cmax' : 100.,
+               'reversescale': True,
+               'colorbar': {'title':'RH (%)'},
             'line': {
                 'width': 0.5,
-                'color': 'blue'
+                'color': 'black'
             }
         },
         'text': txt,
@@ -214,25 +215,15 @@ def update_graph_2(counterval, height, temp, humid):
         'showlegend': False,
         
     }
-    trace3={#'mode': 'markers',
-        #'marker': {
-        #    'symbol': symbol,
-        #    'size': size,
-        #    'opacity': 0.25,
-        #    'color' : 'blue',
-        #    'line': {
-        #        'width': 0.5,
-        #        'color': 'white'
-        #    }
-        #}    
+    trace3={    
         'fill' : 'tozeroy',
         'hoverinfo' : 'none',
         'showlegend': False,
         
     }     
     return {
-        'data': [dict({'x': x, 'y': y}, **trace1),
-                 dict({'x': windx[:-1], 'y': windy}, **trace2),
+        'data': [dict({'x': windx, 'y': windy}, **trace2),
+                 dict({'x': x, 'y': y}, **trace1),  
                  dict({'x': MTNX, 'y': mtny}, **trace3),
                  ],
         'layout': {
@@ -252,3 +243,5 @@ if __name__ == '__main__':
     #update_graph_2(100, 3.897692586860594*1000, 25, 20)
     #update_graph_2(100, 1500, 25, 50)
     #update_graph_2(100, 1000, 30, 40)
+    #update_graph_2(100,1500,30,20)
+    #update_graph_2(5,1500,30,20)

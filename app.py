@@ -227,8 +227,15 @@ def update_graph_2(counterval, height, temp, humid):
                  dict({'x': MTNX, 'y': mtny}, **trace3),
                  ],
         'layout': {
-            'xaxis': {'range': [0,XMAX*1.05]},
-            'yaxis': {'range': [0,1.1*windh(0, MAXMNHT,  xoffset=0)]},
+            'xaxis': {'range': [0,XMAX*1.05], 'title': 'Distance (km)'},
+            'yaxis': {'range': [0,1.1*windh(0, MAXMNHT,  xoffset=0)], 'title': 'Elevation (m)'},
+            'margin': {
+                'l': 60,
+                'r': 40,
+                'b': 40,
+                't': 10,
+                'pad': 4
+              },             
         }
     }
 

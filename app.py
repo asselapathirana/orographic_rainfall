@@ -137,53 +137,13 @@ def reset_counter(height,temp,humid):
 )
 def update_graph_2(counterval, height, temp, humid):
     length = min([counterval,len(XVALUES)])
-    windx= XVALUES[:length]
-    mtny=windh(MTNX, height, ratio=1, 
-              yoffset=0)
-    windy= windh(windx, height)
-    
-    
-    temp_ = temp*units.degC
-    initp = mc.height_to_pressure_std(windy[0]*units.meters)
-    dewpt = mc.dewpoint_rh(temp_,humid/100.)
-    lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
-    LCL = mc.pressure_to_height_std(lcl_[0])
-    ## check if LCL is below the top of the wind profile. 
-    pressures = mc.height_to_pressure_std(windy*units.meters)
-    
-    wvmr0 = mc.mixing_ratio_from_relative_humidity(humid/100., temp_, initp)
-    
-    # now calculate the air parcel temperatures and RH at each position
-    if (lcl_[0]<=min(pressures)):
-        T=mc.dry_lapse(pressures, temp_)
-        RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, t, p) for t,p in zip(T,pressures)]
-    else:
-        mini=np.argmin(pressures)
-        p1=pressures[:mini]
-        p2=pressures[mini-1:] # with an overlap
-        T1=parcel_profile(p1, temp_, dewpt) # see thero.py 354
-        dwtop=mc.dewpoint_rh(T1[-1], 1.0) # staurated
-        T2=mc.dry_lapse(p2,T1[-1])
-        T=concatenate((T1,T2[1:]))
-        wvmrtop = mc.saturation_mixing_ratio(pressures[mini],T[mini])
-        
-        RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, *tp) if tp[1]>lcl_[0] and i<=mini else 1.0 if i<mini else  
-              mc.relative_humidity_from_mixing_ratio(wvmrtop, *tp)
-              for i,tp in enumerate(zip(T,pressures))]
-
-    RH=concatenate(RH)
-    
-    
-    x = [windx[-1]]
-    y = [windy[-1]]        
-    rhlast=float(RH.magnitude[-1]*100.)
-    TC=T.to("degC")
-    print(rhlast, RH.magnitude[-1]*100., RH, TC,humid, lcl_[0], LCL,  file=sys.stderr) 
+    windx, mtny, windy, lcl_, LCL, TC, RH = atmCalc(height, temp, humid)
+    x = [windx[length-1]]
+    y = [windy[length-1]]        
+    rhlast=float(RH.magnitude[length-1]*100.)
+    print(rhlast, RH.magnitude[length-1]*100., RH, TC,humid, lcl_[0], LCL,  file=sys.stderr) 
     txt=["{:.1f} °C/ {:.0f} %".format(t,rh*100.) for t,rh in zip(TC.magnitude,RH.magnitude)]
     size, symbol = zip(*[ (15, 'circle') if v*units.meters<LCL or x > XPEAK else (25, "star") if t>0*units.degC  else (30, 'hexagram') for x,v, t in zip(windx,windy,TC) ])
-    
-        
-    
     colorscale='Viridis'
     
     trace1={'mode': 'markers',
@@ -222,7 +182,7 @@ def update_graph_2(counterval, height, temp, humid):
         
     }     
     return {
-        'data': [dict({'x': windx, 'y': windy}, **trace2),
+        'data': [dict({'x': windx[:length], 'y': windy[:length]}, **trace2),
                  dict({'x': x, 'y': y}, **trace1),  
                  dict({'x': MTNX, 'y': mtny}, **trace3),
                  ],
@@ -238,6 +198,44 @@ def update_graph_2(counterval, height, temp, humid):
               },             
         }
     }
+
+def atmCalc(height, temp, humid):
+    windx= XVALUES
+    mtny=windh(MTNX, height, ratio=1, 
+              yoffset=0)
+    windy= windh(windx, height)
+    
+    
+    temp_ = temp*units.degC
+    initp = mc.height_to_pressure_std(windy[0]*units.meters)
+    dewpt = mc.dewpoint_rh(temp_,humid/100.)
+    lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
+    LCL = mc.pressure_to_height_std(lcl_[0])
+    ## check if LCL is below the top of the wind profile. 
+    pressures = mc.height_to_pressure_std(windy*units.meters)
+    
+    wvmr0 = mc.mixing_ratio_from_relative_humidity(humid/100., temp_, initp)
+    
+    # now calculate the air parcel temperatures and RH at each position
+    if (lcl_[0]<=min(pressures)):
+        T=mc.dry_lapse(pressures, temp_)
+        RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, t, p) for t,p in zip(T,pressures)]
+    else:
+        mini=np.argmin(pressures)
+        p1=pressures[:mini]
+        p2=pressures[mini-1:] # with an overlap
+        T1=parcel_profile(p1, temp_, dewpt) # see thero.py 354
+        dwtop=mc.dewpoint_rh(T1[-1], 1.0) # staurated
+        T2=mc.dry_lapse(p2,T1[-1])
+        T=concatenate((T1,T2[1:]))
+        wvmrtop = mc.saturation_mixing_ratio(pressures[mini],T[mini])
+        
+        RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, *tp) if tp[1]>lcl_[0] and i<=mini else 1.0 if i<mini else  
+              mc.relative_humidity_from_mixing_ratio(wvmrtop, *tp)
+              for i,tp in enumerate(zip(T,pressures))]
+
+    RH=concatenate(RH)
+    return windx, mtny, windy, lcl_, LCL, T.to("degC"), RH
 
 def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WINDMTOFFSET):
     return maxht*ratio/(1+((xval-xoffset)/div)**2.) + yoffset

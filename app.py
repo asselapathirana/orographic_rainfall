@@ -159,11 +159,12 @@ def calculate_set(height,temp,humid):
     ]
 )
 def update_RHElGraph(counterval, calculation_store_data):
-    windy, windx, mtny, TC, RH, trace = json.loads(calculation_store_data)
+    windy, windx, mtny, TC, RH, trace, LCL = json.loads(calculation_store_data)
     length = min([counterval,len(XVALUES)])   
 
     return {
-    'data': [{'x':RH[:length],'y':windy[:length]}], 
+    'data': [{'x':RH[:length],'y':windy[:length]},
+             dict({'x':[0,100], 'y':[LCL,LCL]}, **trace[7]),], 
     'layout':{'xaxis': {'range': [-5,105], 'title': 'RH (%)'},
             'yaxis': {'range': [min(windy)*.95,max(windy)*1.05], 'title': 'Elevation (m)'},
             'height': 200,
@@ -174,6 +175,7 @@ def update_RHElGraph(counterval, calculation_store_data):
                 't': 10,
                 'pad': 4,
               },             
+            'showlegend': False,
             },
     }
 
@@ -186,10 +188,11 @@ def update_RHElGraph(counterval, calculation_store_data):
     ]
 )
 def update_TElGraph(counterval, calculation_store_data):
-    windy, windx, mtny, TC, RH, trace = json.loads(calculation_store_data)
+    windy, windx, mtny, TC, RH, trace, LCL = json.loads(calculation_store_data)
     length = min([counterval,len(XVALUES)])    
     return {
-    'data': [{'x':TC[:length],'y':windy[:length]}], 
+    'data': [{'x':TC[:length],'y':windy[:length]},
+             dict({'x':[min(TC),max(TC)], 'y':[LCL,LCL]}, **trace[7]),], 
     'layout':{'xaxis': {'range': [min(TC),max(TC)], 'title': 'T (°C)'},
             'yaxis': {'range': [min(windy),max(windy)], 'title': 'Elevation (m)'},
             'height': 200,
@@ -199,7 +202,8 @@ def update_TElGraph(counterval, calculation_store_data):
                 'b': 40,
                 't': 10,
                 'pad': 4
-              },             
+              },       
+            'showlegend': False
             },
     }
 
@@ -215,7 +219,7 @@ def update_TElGraph(counterval, calculation_store_data):
 )
 def update_mainGraph(counterval, calculation_store_data):
     
-    windy, windx, mtny, TC, RH, trace = json.loads(calculation_store_data)
+    windy, windx, mtny, TC, RH, trace, LCL = json.loads(calculation_store_data)
     length = min([counterval,len(XVALUES)])
     x = [windx[length-1]]
     y = [windy[length-1]] 
@@ -228,6 +232,7 @@ def update_mainGraph(counterval, calculation_store_data):
                  dict({'x':[-99999], 'y':[-99999]}, **trace[4]),
                  dict({'x':[-99999], 'y':[-99999]}, **trace[5]),
                  dict({'x':[-99999], 'y':[-99999]}, **trace[6]),
+                 dict({'x':[0,XMAX/3., XMAX*2./3.,XMAX], 'y':[LCL,LCL,LCL,LCL]}, **trace[7]),
                  ],
         'layout': {
             'xaxis': {'range': [0,XMAX*1.05], 'title': 'Distance (km)'},
@@ -305,11 +310,13 @@ def saveCalc(height,temp,humid):
         for x in [sym_parcel, sym_nop, sym_lp, sym_ip]
         ]
     
+    trlcl = [dict(mode='lines+text', name='Lines and Text', text=['Lifting Condensation Level'], textposition='bottom right', hoverinfo='text', showlegend= False,)]
+    
    
     
-    trace=[trace1, trace2, trace3] + tr
+    trace=[trace1, trace2, trace3] + tr + trlcl
     RH=RH*100.
-    return windy.tolist(), windx.tolist(), mtny.tolist(), TC.magnitude.tolist(), RH.magnitude.tolist(), trace # no numpy
+    return windy.tolist(), windx.tolist(), mtny.tolist(), TC.magnitude.tolist(), RH.magnitude.tolist(), trace, LCL.to("meters").magnitude # no numpy
 
 def atmCalc(height, temp, humid):
     print("ATMCALC", height, temp, humid, file=sys.stderr)
@@ -383,7 +390,7 @@ if __name__ == '__main__':
     app.run_server(debug=True)
     #d=calculate_set(3.897692586860594*1000, 25, 20)
     #d=calculate_set(1500, 25, 50)
-    #d=calculate_set(1500, 30, 40)
+    d=calculate_set(1500, 30, 40)
     #d=calculate_set(1500,30,20)
     #d=calculate_set(1500,30,20)
     #calculate_set(1500, 20, 30)

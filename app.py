@@ -48,11 +48,13 @@ def parcel_profile(pressure, temperature, dewpt):
     # Find the dry adiabatic profile, *including* the LCL. We need >= the LCL in case the
     # LCL is included in the levels. It's slightly redundant in that case, but simplifies
     # the logic for removing it later.
-    press_lower = concatenate((pressure[pressure >= lcl_pressure], lcl_pressure))
+    press_lower = concatenate((pressure[pressure > lcl_pressure], lcl_pressure))
     t1 = mc.dry_lapse(press_lower, temperature)
 
     # Find moist pseudo-adiabatic profile starting at the LCL
-    press_upper = concatenate((lcl_pressure, pressure[pressure < lcl_pressure]))
+    press_upper=pressure[pressure < lcl_pressure]
+    if not np.isclose(press_upper[0],lcl_pressure):
+        press_upper = concatenate((lcl_pressure, press_upper))
     t2 = mc.moist_lapse(press_upper, t1[-1]).to(t1.units)
 
     # Return LCL *without* the LCL point
@@ -79,39 +81,47 @@ XVALUES = np.append(-99999999,np.arange(0,XMAX+.01,XSTEP),99999999) # do one num
 MTNX=np.arange(-XMAX*.1,XMAX*1.2,1)
 
 # symbol size and name
-sym_nop = (15, 'circle')
-sym_lp = (25, "star")
-sym_ip = (30, 'hexagram')
-sym_parcel = (50, 'y-right-open')
+sym_nop = (15, 'circle', 'No precip.')
+sym_lp = (25, "star", 'Liquid precip.')
+sym_ip = (30, 'hexagram', 'Ice precip.')
+sym_parcel = (50, 'y-right-open', 'Air parcel')
+
+banner= html.Div([
+        html.H2("Orographic rainfall demo"),
+        html.Img(src="/static/apLogo2.png"),
+    ], className='banner')
 
 row1 =  html.Div([ # row 1 start ([
-        html.Div(dcc.Graph(animate=False, id='graph-2'), className="eight columns"),
+        html.Div(dcc.Graph(animate=False, id='graph-2', config={'displayModeBar': False }), className="eight columns"),
         html.Div(
-            [html.Div(dcc.Graph(animate=False, id='graphRHEl') , className="row"),
-            html.Div(dcc.Graph(animate=False, id='graphTEl') , className="row"),
+            [html.Div(dcc.Graph(animate=False, id='graphRHEl', config={'displayModeBar': False }) , className="row"),
+            html.Div(dcc.Graph(animate=False, id='graphTEl', config={'displayModeBar': False }) , className="row"),
             html.Div(dcc.Interval(id='ncounter', interval=ANIM_DELTAT, n_intervals=0 )),  # no display
             html.Div(id='calculations_store', style={'display': 'none'})                  # no display
             ], className="four columns"), 
     ], className="row") # row 1 end ])
 
 slider1=html.Div([
-    html.Div('Mountain Height'), dcc.Slider(id='height', min=0, max=MAXMNHT, step=500, value=1500,  marks={i: i for i in range(0,MAXMNHT+1,1000)}),
-    ],className="four columns")
+    html.Div('Mountain Height'), dcc.Slider(id='height', min=0, max=MAXMNHT, step=250, value=1500,  marks={i: i for i in range(0,MAXMNHT+1,1000)}),
+    ],className="three columns")
 slider2=html.Div([
-    html.Div('Humidity of air (%)'), dcc.Slider(id='humid', min=0, max=100, step=1, value=40,  marks={i: i for i in range(0,100+1,10)}),
-    ], className="four columns")
+    html.Div('Humidity of air (%)'), dcc.Slider(id='humid', min=0, max=100, step=5, value=40,  marks={i: i for i in range(0,100+1,20)}),
+    ], className="three columns")
 slider3=html.Div([
-    html.Div('Temperature of air (°C)'), dcc.Slider(id='temp', min=-20, max=50, step=1, value=30, marks={i: i for i in range(-20,50+1,5)}, ),
-    ],className="four columns",) #style={"margin-top": "25px"}
-
+    html.Div('Temperature of air (°C)'), dcc.Slider(id='temp', min=-20, max=50, step=1, value=30, marks={i: i for i in range(-20,50+1,10)}, ),
+    ],className="three columns",) #style={"margin-top": "25px"}
+button=html.Div([html.Button('Re-run', id='button'),
+                 ], className="three columns",)
 
 row2 = html.Div([ # begin row 2
     slider1,
     slider2,
     slider3,
+    button,
     ], className = "row") # end row 2
 
 app.layout = html.Div([  # begin container
+    banner,
     row1,
     row2,
     ], className="container") # end container
@@ -122,9 +132,11 @@ app.layout = html.Div([  # begin container
 [dash.dependencies.Input('height','value'),
  dash.dependencies.Input('temp','value'),
  dash.dependencies.Input('humid','value'),
+ dash.dependencies.Input('button', 'n_clicks'),
  ],    
 )
-def reset_counter(height,temp,humid):
+def reset_counter(height,temp,humid,n_clicks):
+    print("HEEEE", file=sys.stderr)
     return 0
 
 @app.callback(
@@ -135,7 +147,8 @@ dash.dependencies.Output('calculations_store','children'),
  ]    
 )
 def calculate_set(height,temp,humid):
-    st=json.dumps(saveCalc(humid, temp, height))
+    sc = saveCalc(height,temp,humid)
+    st=json.dumps(sc)
     return st
 
 @app.callback(
@@ -147,19 +160,19 @@ def calculate_set(height,temp,humid):
 )
 def update_RHElGraph(counterval, calculation_store_data):
     windy, windx, mtny, TC, RH, trace = json.loads(calculation_store_data)
-    length = min([counterval,len(XVALUES)])    
-    print("HEEEE",counterval, length, RH[:length],   file=sys.stderr)
+    length = min([counterval,len(XVALUES)])   
+
     return {
     'data': [{'x':RH[:length],'y':windy[:length]}], 
-    'layout':{'xaxis': {'range': [0,105], 'title': 'RH (%)'},
-            'yaxis': {'range': [min(windy),max(windy)], 'title': 'Elevation (m)'},
+    'layout':{'xaxis': {'range': [-5,105], 'title': 'RH (%)'},
+            'yaxis': {'range': [min(windy)*.95,max(windy)*1.05], 'title': 'Elevation (m)'},
             'height': 200,
             'margin': {
                 'l': 60,
                 'r': 40,
                 'b': 40,
                 't': 10,
-                'pad': 4
+                'pad': 4,
               },             
             },
     }
@@ -175,7 +188,6 @@ def update_RHElGraph(counterval, calculation_store_data):
 def update_TElGraph(counterval, calculation_store_data):
     windy, windx, mtny, TC, RH, trace = json.loads(calculation_store_data)
     length = min([counterval,len(XVALUES)])    
-    print("HEEEE",counterval, length, RH[:length],   file=sys.stderr)
     return {
     'data': [{'x':TC[:length],'y':windy[:length]}], 
     'layout':{'xaxis': {'range': [min(TC),max(TC)], 'title': 'T (°C)'},
@@ -227,21 +239,19 @@ def update_mainGraph(counterval, calculation_store_data):
                 't': 10,
                 'pad': 4
               },   
-            'legend': {'x':.75, 'y':.8},
+            'legend': {'x':.01, 'y':1.},
         }
     }
 
-def saveCalc(humid, temp, height):
+def saveCalc(height,temp,humid):
     windx, mtny, windy, lcl_, LCL, TC, RH = atmCalc(height, temp, humid)
-           
-    print(RH, TC,humid, lcl_[0], LCL,  file=sys.stderr) 
     txt=["{:.1f} °C/ {:.0f} %".format(t,rh*100.) for t,rh in zip(TC.magnitude,RH.magnitude)]
     
     
     colorscale='Viridis'
    
     
-    size, symbol = zip(*[ sym_nop if v*units.meters<LCL or x > XPEAK else sym_lp if t>0*units.degC  else sym_ip for x,v, t in zip(windx,windy,TC) ])
+    size, symbol, name = zip(*[ sym_nop if v*units.meters<LCL or x > XPEAK else sym_lp if t>0*units.degC  else sym_ip for x,v, t in zip(windx,windy,TC) ])
     
     trace1={'mode': 'markers',
             'marker': {
@@ -279,51 +289,34 @@ def saveCalc(humid, temp, height):
         
     }   
     
-    tr1 = {'mode': 'markers',
+    tr=[{'mode': 'markers',
         'marker': {
-            'symbol': sym_parcel[1],
+            'symbol': x[1],
             'size': 15,
             'color': 'black',
             },
-            'name' : 'Air parcel',
+        'line': {
+            'color': 'rgb(231, 99, 250)',
+            'width' : 2
+        },   
+        'name' :  x[2],
         'showlegend': True,
-        }
-    tr2 =  {'mode': 'markers',
-        'marker': {
-            'symbol': sym_nop[1],
-            'size': 15,
-            'color': 'black',
-            },
-            'name' : 'No precip',
-        'showlegend': True,
-        }
-    tr3 =  {'mode': 'markers',
-        'marker': {
-            'symbol': sym_lp[1],
-            'size': 15,
-            'color': 'black',
-            },
-            'name' : 'Liquid precip',
-        'showlegend': True,
-        }
-    tr4 =  {'mode': 'markers',
-        'marker': {
-            'symbol': sym_ip[1],
-            'size': 15,
-            'color': 'black',
-            },
-            'name' : 'Ice precip',
-        'showlegend': True,
-        }
+        } 
+        for x in [sym_parcel, sym_nop, sym_lp, sym_ip]
+        ]
     
-    trace=[trace1, trace2, trace3, tr1, tr2, tr3, tr4]
+   
+    
+    trace=[trace1, trace2, trace3] + tr
     RH=RH*100.
     return windy.tolist(), windx.tolist(), mtny.tolist(), TC.magnitude.tolist(), RH.magnitude.tolist(), trace # no numpy
 
 def atmCalc(height, temp, humid):
-    windx= XVALUES
+    print("ATMCALC", height, temp, humid, file=sys.stderr)
     mtny=windh(MTNX, height, ratio=1, 
               yoffset=0)
+    
+    windx= XVALUES
     windy= windh(windx, height)
     
     
@@ -332,6 +325,12 @@ def atmCalc(height, temp, humid):
     dewpt = mc.dewpoint_rh(temp_,humid/100.)
     lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
     LCL = mc.pressure_to_height_std(lcl_[0])
+    if (lcl_[0]>mc.height_to_pressure_std(max(windy)*units.meters)):
+        # add LCL to x
+        xlcl=windh(LCL.to('meters').magnitude, height, inv=True)
+        windx=np.sort(np.append(windx,xlcl))
+        windy= windh(windx, height)
+        
     pressures = mc.height_to_pressure_std(windy*units.meters)
     
     wvmr0 = mc.mixing_ratio_from_relative_humidity(humid/100., temp_, initp)
@@ -344,12 +343,16 @@ def atmCalc(height, temp, humid):
         mini=np.argmin(pressures)
         p1=pressures[:mini+1]
         p2=pressures[mini:] # with an overlap
-        T1=parcel_profile(p1, temp_, dewpt) # see thero.py 354
-        dwtop=mc.dewpoint_rh(T1[-1], 1.0) # staurated
+        p11=p1[p1>=lcl_[0]*.9999999] # lower (with tol) wth lcl
+        p12=p1[p1<lcl_[0]*1.000009]  # upper (with tol) with lcl
+        T11=mc.dry_lapse(p11,temp_)
+        T12=mc.moist_lapse(p12,lcl_[1])
+        T1=concatenate((T11[:-1],T12))
         T2=mc.dry_lapse(p2,T1[-1])
         T=concatenate((T1,T2[1:]))
         wvmrtop = mc.saturation_mixing_ratio(pressures[mini],T[mini])
         
+   
         RH= [ mc.relative_humidity_from_mixing_ratio(wvmr0, *tp) if tp[1]>lcl_[0] and i<=mini else 1.0 if i<mini else  
               mc.relative_humidity_from_mixing_ratio(wvmrtop, *tp)
               for i,tp in enumerate(zip(T,pressures))]
@@ -357,17 +360,30 @@ def atmCalc(height, temp, humid):
     RH=concatenate(RH)
     return windx, mtny, windy, lcl_, LCL, T.to("degC"), RH
 
-def windh(xval, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WINDMTOFFSET):
-    return maxht*ratio/(1+((xval-xoffset)/div)**2.) + yoffset
+def windh(val, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WINDMTOFFSET, inv=False):
+    if inv:
+        f=div*math.sqrt(maxht*ratio/(val-yoffset)-1)
+        return xoffset-f, xoffset+f        
+    return maxht*ratio/(1+((val-xoffset)/div)**2.) + yoffset
     
+
+
     
-app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
+
+# load the styles  
+external_css = ["https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css",
+                "/static/boxed.css",
+                "https://fonts.googleapis.com/css?family=Raleway:400,400i,700,700i",
+                "https://fonts.googleapis.com/css?family=Product+Sans:400,400i,700,700i"]
+for css in external_css:
+    app.css.append_css({"external_url": css})
 
 if __name__ == '__main__':
     app.run_server(debug=True)
     #d=calculate_set(3.897692586860594*1000, 25, 20)
     #d=calculate_set(1500, 25, 50)
-    #d=calculate_set(1000, 30, 40)
+    #d=calculate_set(1500, 30, 40)
     #d=calculate_set(1500,30,20)
     #d=calculate_set(1500,30,20)
+    #calculate_set(1500, 20, 30)
     #update_mainGraph(150,d)

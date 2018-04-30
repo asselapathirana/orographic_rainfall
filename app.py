@@ -325,7 +325,8 @@ def atmCalc(height, temp, humid):
     dewpt = mc.dewpoint_rh(temp_,humid/100.)
     lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
     LCL = mc.pressure_to_height_std(lcl_[0])
-    if (lcl_[0]>mc.height_to_pressure_std(max(windy)*units.meters)):
+
+    if (lcl_[0]>mc.height_to_pressure_std(max(windy)*units.meters)): 
         # add LCL to x
         xlcl=windh(LCL.to('meters').magnitude, height, inv=True)
         windx=np.sort(np.append(windx,xlcl))
@@ -343,7 +344,7 @@ def atmCalc(height, temp, humid):
         mini=np.argmin(pressures)
         p1=pressures[:mini+1]
         p2=pressures[mini:] # with an overlap
-        p11=p1[p1>=lcl_[0]*.9999999] # lower (with tol) wth lcl
+        p11=p1[p1>=lcl_[0]*.9999999] # lower (with tol) with lcl
         p12=p1[p1<lcl_[0]*1.000009]  # upper (with tol) with lcl
         T11=mc.dry_lapse(p11,temp_)
         T12=mc.moist_lapse(p12,lcl_[1])

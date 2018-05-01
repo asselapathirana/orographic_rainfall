@@ -98,7 +98,7 @@ row1 =  html.Div([ # row 1 start ([
             html.Div(dcc.Graph(animate=False, id='graphTEl', config={'displayModeBar': False }) , className="row"),
             html.Div(dcc.Interval(id='ncounter', interval=ANIM_DELTAT, n_intervals=0 )),  # no display
             html.Div(id='calculations_store', style={'display': 'none'})                  # no display
-            ], className="four columns"), 
+            ], className="four columns "), 
     ], className="row") # row 1 end ])
 
 slider1=html.Div([
@@ -124,7 +124,10 @@ app.layout = html.Div([  # begin container
     banner,
     row1,
     row2,
-    ], className="container") # end container
+    ], className="container", style={'padding': '0px 10px 15px 10px',
+          'marginLeft': 'auto', 'marginRight': 'auto', "width": "900px",
+          'boxShadow': '0px 0px 5px 5px rgba(204,204,204,0.4)'} 
+   ) # end container
 
 
 """The function that 'disables' the counter. Use together with reset_counter function below"""

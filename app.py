@@ -105,7 +105,7 @@ slider1=html.Div([
     html.Div('Mountain Height'), dcc.Slider(id='height', min=0, max=MAXMNHT, step=250, value=1500,  marks={i: i for i in range(0,MAXMNHT+1,1000)}),
     ],className="three columns")
 slider2=html.Div([
-    html.Div('Humidity of air (%)'), dcc.Slider(id='humid', min=0, max=100, step=5, value=40,  marks={i: i for i in range(0,100+1,20)}),
+    html.Div('Humidity of air (%)'), dcc.Slider(id='humid', min=1, max=100, step=5, value=40,  marks={i: i for i in range(0,100+1,20)}),
     ], className="three columns")
 slider3=html.Div([
     html.Div('Temperature of air (°C)'), dcc.Slider(id='temp', min=-20, max=50, step=1, value=30, marks={i: i for i in range(-20,50+1,10)}, ),
@@ -127,6 +127,16 @@ app.layout = html.Div([  # begin container
     ], className="container") # end container
 
 
+"""The function that 'disables' the counter. Use together with reset_counter function below"""
+@app.callback(dash.dependencies.Output('ncounter', 'interval'),
+[dash.dependencies.Input('ncounter', 'n_intervals'),
+])
+def disable_counter(n_intervals):
+    if n_intervals > len(XVALUES):
+        return 100*60*60*1000
+    return ANIM_DELTAT
+
+"""The function that 'resets' the counter to 0. Use together with disable_counter function above."""
 @app.callback(
     dash.dependencies.Output('ncounter', 'n_intervals'),
 [dash.dependencies.Input('height','value'),
@@ -136,7 +146,6 @@ app.layout = html.Div([  # begin container
  ],    
 )
 def reset_counter(height,temp,humid,n_clicks):
-    print("HEEEE", file=sys.stderr)
     return 0
 
 @app.callback(

@@ -172,7 +172,7 @@ def update_RHElGraph(counterval, calculation_store_data):
     length = min([counterval,len(XVALUES)])   
 
     return {
-    'data': [{'x':RH[:length],'y':windy[:length]},
+    'data': [{'x':RH[:length],'y':windy[:length], 'mode':'lines+markers',},
              dict({'x':[0,100], 'y':[LCL,LCL]}, **trace[7]),], 
     'layout':{'xaxis': {'range': [-5,105], 'title': 'RH (%)'},
             'yaxis': {'range': [min(windy)*.95,max(windy)*1.05], 'title': 'Elevation (m)'},
@@ -200,7 +200,7 @@ def update_TElGraph(counterval, calculation_store_data):
     windy, windx, mtny, TC, RH, trace, LCL = json.loads(calculation_store_data)
     length = min([counterval,len(XVALUES)])    
     return {
-    'data': [{'x':TC[:length],'y':windy[:length]},
+    'data': [{'x':TC[:length],'y':windy[:length], 'mode':'lines+markers',},
              dict({'x':[min(TC),max(TC)], 'y':[LCL,LCL]}, **trace[7]),], 
     'layout':{'xaxis': {'range': [min(TC),max(TC)], 'title': 'T (°C)'},
             'yaxis': {'range': [min(windy),max(windy)], 'title': 'Elevation (m)'},
@@ -303,7 +303,7 @@ def saveCalc(height,temp,humid):
         
     }   
     
-    tr=[{'mode': 'markers',
+    tr=[{'mode': 'markers', # to create the legend. 
         'marker': {
             'symbol': x[1],
             'size': 15,
@@ -319,7 +319,8 @@ def saveCalc(height,temp,humid):
         for x in [sym_parcel, sym_nop, sym_lp, sym_ip]
         ]
     
-    trlcl = [dict(mode='lines+text', name='Lines and Text', text=['Lifting Condensation Level'], textposition='bottom right', hoverinfo='text', showlegend= False,)]
+    trlcl = [dict(mode='lines+text', name='Lines and Text', text=['Lifting Condensation Level'], 
+                  line=dict(color='rgb(55, 206, 204)', width=2), textposition='bottom right', hoverinfo='text', showlegend= False,)]
     
    
     

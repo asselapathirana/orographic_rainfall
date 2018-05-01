@@ -342,7 +342,7 @@ def atmCalc(height, temp, humid):
     lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
     LCL = mc.pressure_to_height_std(lcl_[0])
 
-    if (lcl_[0]>mc.height_to_pressure_std(max(windy)*units.meters)): 
+    if (lcl_[0]>mc.height_to_pressure_std(max(windy)*units.meters) and LCL > windy[0]*units.meters*1.000009): 
         # add LCL to x
         xlcl=windh(LCL.to('meters').magnitude, height, inv=True)
         windx=np.sort(np.append(windx,xlcl))
@@ -399,8 +399,9 @@ if __name__ == '__main__':
     app.run_server(debug=True)
     #d=calculate_set(3.897692586860594*1000, 25, 20)
     #d=calculate_set(1500, 25, 50)
-    d=calculate_set(1500, 30, 40)
+    #d=calculate_set(1500, 30, 40)
     #d=calculate_set(1500,30,20)
     #d=calculate_set(1500,30,20)
     #calculate_set(1500, 20, 30)
     #update_mainGraph(150,d)
+    #d=calculate_set(1500, 30, 100)

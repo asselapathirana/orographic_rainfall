@@ -179,7 +179,7 @@ def update_RHElGraph(counterval, calculation_store_data):
              dict({'x':[0,100], 'y':[LCL,LCL]}, **trace[7]),], 
     'layout':{'xaxis': {'range': [-5,105], 'title': 'RH (%)'},
             'yaxis': {'range': [min(windy)*.95,max(windy)*1.05], 'title': 'Elevation (m)'},
-            'height': 200,
+            'height': 220,
             'margin': {
                 'l': 60,
                 'r': 40,
@@ -202,12 +202,13 @@ def update_RHElGraph(counterval, calculation_store_data):
 def update_TElGraph(counterval, calculation_store_data):
     windy, windx, mtny, TC, RH, trace, LCL = json.loads(calculation_store_data)
     length = min([counterval,len(XVALUES)])    
+    tr = [min(TC)-2,max(TC)+2]
     return {
     'data': [{'x':TC[:length],'y':windy[:length], 'mode':'lines+markers',},
-             dict({'x':[min(TC),max(TC)], 'y':[LCL,LCL]}, **trace[7]),], 
-    'layout':{'xaxis': {'range': [min(TC),max(TC)], 'title': 'T (°C)'},
-            'yaxis': {'range': [min(windy),max(windy)], 'title': 'Elevation (m)'},
-            'height': 200,
+             dict({'x':tr, 'y':[LCL,LCL]}, **trace[7]),], 
+    'layout':{'xaxis': {'range': tr, 'title': 'T (°C)'},
+            'yaxis': {'range': [min(windy)*.95,max(windy)*1.05], 'title': 'Elevation (m)'},
+            'height': 220,
             'margin': {
                 'l': 60,
                 'r': 40,

@@ -28,7 +28,7 @@ XMAX = XPEAK * 2  #
 XSTEP = 10
 # do one number more than XMAX/XSTEP then have inf on each side.
 XVALUES = np.append(-99999999, np.arange(0, XMAX + .01, XSTEP), 99999999)
-MTNX = np.arange(-XMAX * .1, XMAX * 1.2, 1)
+MTNX = np.arange(-XMAX * .01, XMAX * 1.01, 1)
 
 # symbol size and name
 sym_nop = (10, 'circle', 'No precip.')
@@ -244,9 +244,9 @@ def update_mainGraph(counterval, calculation_store_data):
     y = [windy[length - 1]]
 
     return {
-        'data': [dict({'x': windx[1:length], 'y': windy[1:length]}, **trace[1]), # all points travelled by air parcel. 
+        'data': [dict({'x': windx[:length], 'y': windy[:length]}, **trace[1]), # all points travelled by air parcel. 
                  dict({'x': x, 'y': y}, **trace[0]), # air parcel 
-                 dict({'x': MTNX[1:], 'y': mtny[1:]}, **trace[2]), # mountain 
+                 dict({'x': MTNX, 'y': mtny}, **trace[2]), # mountain 
                  dict({'x': ['null'], 'y': ['null']}, **trace[3]), # legend (fake data)
                  dict({'x': ['null'], 'y': ['null']}, **trace[4]), # legend (fake data)
                  dict({'x': ['null'], 'y': ['null']}, **trace[5]), # legend (fake data)
@@ -270,6 +270,12 @@ def update_mainGraph(counterval, calculation_store_data):
 
 def saveCalc(height, temp, humid):
     windx, mtny, windy, lcl_, LCL, TC, RH = atmCalc(height, temp, humid)
+    # now remove the first item from all (first x value is far away in negative!)
+    windx=windx[1:]
+    windy=windy[1:]
+    TC=TC[1:] 
+    RH=RH[1:]
+    
     txt = ["{:.1f} °C/ {:.0f} %".format(t, rh * 100.)
            for t, rh in zip(TC.magnitude, RH.magnitude)]
 

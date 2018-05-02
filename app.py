@@ -26,8 +26,8 @@ SHAPEFA = 20
 
 XMAX = XPEAK * 2  #
 XSTEP = 10
-XVALUES = np.append(-99999999, np.arange(0, XMAX + .01, XSTEP),
-                    99999999)  # do one number more than XMAX/XSTEP then have inf on each side.
+# do one number more than XMAX/XSTEP then have inf on each side.
+XVALUES = np.append(-99999999, np.arange(0, XMAX + .01, XSTEP), 99999999)
 MTNX = np.arange(-XMAX * .1, XMAX * 1.2, 1)
 
 # symbol size and name
@@ -42,27 +42,79 @@ banner = html.Div([
 ], className='banner')
 
 row1 = html.Div([  # row 1 start ([
-    html.Div(dcc.Graph(animate=False, id='graph-2', config={'displayModeBar': False}), className="eight columns"),
+    html.Div(
+        dcc.Graph(
+            animate=False,
+            id='graph-2',
+            config={
+                'displayModeBar': False}),
+        className="eight columns"),
     html.Div(
         [html.Div(dcc.Graph(animate=False, id='graphRHEl', config={'displayModeBar': False}), className="row"),
-         html.Div(dcc.Graph(animate=False, id='graphTEl', config={'displayModeBar': False}), className="row"),
-         html.Div(dcc.Interval(id='ncounter', interval=ANIM_DELTAT, n_intervals=0)),  # no display
-         html.Div(id='calculations_store', style={'display': 'none'})  # no display
+         html.Div(
+            dcc.Graph(
+                animate=False,
+                id='graphTEl',
+                config={
+                    'displayModeBar': False}),
+             className="row"),
+         html.Div(
+            dcc.Interval(
+                id='ncounter',
+                interval=ANIM_DELTAT,
+                n_intervals=0)),
+            # no display
+            html.Div(
+            id='calculations_store', style={
+                'display': 'none'})  # no display
          ], className="four columns "),
 ], className="row")  # row 1 end ])
 
-slider1 = html.Div([
-    html.Div('Mountain Height'), dcc.Slider(id='height', min=0, max=MAXMNHT, step=250, value=1500,
-                                            marks={i: i for i in range(0, MAXMNHT + 1, 1000)}),
-], className="three columns")
-slider2 = html.Div([
-    html.Div('Humidity of air (%)'),
-    dcc.Slider(id='humid', min=1, max=100, step=5, value=40, marks={i: i for i in range(0, 100 + 1, 20)}),
-], className="three columns")
-slider3 = html.Div([
-    html.Div('Temperature of air (°C)'),
-    dcc.Slider(id='temp', min=-20, max=50, step=1, value=30, marks={i: i for i in range(-20, 50 + 1, 10)}, ),
-], className="three columns", )  # style={"margin-top": "25px"}
+slider1 = html.Div(
+    [
+        html.Div('Mountain Height'),
+        dcc.Slider(
+            id='height',
+            min=0,
+            max=MAXMNHT,
+            step=250,
+            value=1500,
+            marks={
+                i: i for i in range(
+                    0,
+                    MAXMNHT + 1,
+                    1000)}),
+    ],
+    className="three columns")
+slider2 = html.Div(
+    [
+        html.Div('Humidity of air (%)'),
+        dcc.Slider(
+            id='humid',
+            min=1,
+            max=100,
+            step=5,
+            value=40,
+            marks={
+                i: i for i in range(
+                    0,
+                    100 + 1,
+                    20)}),
+    ],
+    className="three columns")
+slider3 = html.Div([html.Div('Temperature of air (°C)'),
+                    dcc.Slider(id='temp',
+                               min=-20,
+                               max=50,
+                               step=1,
+                               value=30,
+                               marks={i: i for i in range(-20,
+                                                          50 + 1,
+                                                          10)},
+                               ),
+                    ],
+                   className="three columns",
+                   )  # style={"margin-top": "25px"}
 button = html.Div([html.Button('Re-run', id='button'),
                    ], className="three columns", )
 
@@ -77,9 +129,7 @@ app.layout = html.Div([  # begin container
     banner,
     row1,
     row2,
-], className="container", style={'padding': '0px 10px 15px 10px',
-                                 'marginLeft': 'auto', 'marginRight': 'auto', "width": "900px",
-                                 'boxShadow': '0px 0px 5px 5px rgba(204,204,204,0.4)'}
+], className="container",
 )  # end container
 
 """The function that 'disables' the counter. Use together with reset_counter function below"""
@@ -145,9 +195,9 @@ def update_RHElGraph(counterval, calculation_store_data):
                        'b': 40,
                        't': 10,
                        'pad': 4,
-                   },
-                   'showlegend': False,
-                   },
+        },
+            'showlegend': False,
+        },
     }
 
 
@@ -174,9 +224,9 @@ def update_TElGraph(counterval, calculation_store_data):
                        'b': 40,
                        't': 10,
                        'pad': 4
-                   },
-                   'showlegend': False
-                   },
+        },
+            'showlegend': False
+        },
     }
 
 
@@ -220,13 +270,15 @@ def update_mainGraph(counterval, calculation_store_data):
 
 def saveCalc(height, temp, humid):
     windx, mtny, windy, lcl_, LCL, TC, RH = atmCalc(height, temp, humid)
-    txt = ["{:.1f} °C/ {:.0f} %".format(t, rh * 100.) for t, rh in zip(TC.magnitude, RH.magnitude)]
+    txt = ["{:.1f} °C/ {:.0f} %".format(t, rh * 100.)
+           for t, rh in zip(TC.magnitude, RH.magnitude)]
 
     colorscale = 'Viridis'
 
-    size, symbol, name = zip(
-        *[sym_nop if v * units.meters < LCL or x > XPEAK else sym_lp if t > 0 * units.degC else sym_ip for x, v, t in
-          zip(windx, windy, TC)])
+    size, symbol, name = zip(*
+                             [sym_nop if v *
+                              units.meters < LCL or x > XPEAK else sym_lp if t > 0 *
+                              units.degC else sym_ip for x, v, t in zip(windx, windy, TC)])
 
     trace1 = {'mode': 'markers',
               'marker': {
@@ -280,14 +332,23 @@ def saveCalc(height, temp, humid):
           for x in [sym_parcel, sym_nop, sym_lp, sym_ip]
           ]
 
-    trlcl = [dict(mode='lines+text', name='Lines and Text', text=['Lifting Condensation Level'],
-                  line=dict(color='rgb(55, 206, 204)', width=2), textposition='bottom right', hoverinfo='text',
-                  showlegend=False, )]
+    trlcl = [
+        dict(
+            mode='lines+text',
+            name='Lines and Text',
+            text=['Lifting Condensation Level'],
+            line=dict(
+                color='rgb(55, 206, 204)',
+                width=2),
+            textposition='bottom right',
+            hoverinfo='text',
+            showlegend=False,
+        )]
 
     trace = [trace1, trace2, trace3] + tr + trlcl
     RH = RH * 100.
-    return windy.tolist(), windx.tolist(), mtny.tolist(), TC.magnitude.tolist(), RH.magnitude.tolist(), trace, LCL.to(
-        "meters").magnitude  # no numpy
+    return windy.tolist(), windx.tolist(), mtny.tolist(), TC.magnitude.tolist(
+    ), RH.magnitude.tolist(), trace, LCL.to("meters").magnitude  # no numpy
 
 
 def atmCalc(height, temp, humid):
@@ -304,7 +365,8 @@ def atmCalc(height, temp, humid):
     lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
     LCL = mc.pressure_to_height_std(lcl_[0])
 
-    if (lcl_[0] > mc.height_to_pressure_std(max(windy) * units.meters) and LCL > windy[0] * units.meters * 1.000009):
+    if (lcl_[0] > mc.height_to_pressure_std(max(windy) * units.meters)
+            and LCL > windy[0] * units.meters * 1.000009):
         # add LCL to x
         xlcl = windh(LCL.to('meters').magnitude, height, inv=True)
         windx = np.sort(np.append(windx, xlcl))
@@ -317,7 +379,10 @@ def atmCalc(height, temp, humid):
     # now calculate the air parcel temperatures and RH at each position
     if (lcl_[0] <= min(pressures)):
         T = mc.dry_lapse(pressures, temp_)
-        RH = [mc.relative_humidity_from_mixing_ratio(wvmr0, t, p) for t, p in zip(T, pressures)]
+        RH = [
+            mc.relative_humidity_from_mixing_ratio(
+                wvmr0, t, p) for t, p in zip(
+                T, pressures)]
     else:
         mini = np.argmin(pressures)
         p1 = pressures[:mini + 1]
@@ -333,25 +398,33 @@ def atmCalc(height, temp, humid):
 
         RH = [mc.relative_humidity_from_mixing_ratio(wvmr0, *tp) if tp[1] > lcl_[
             0] and i <= mini else 1.0 if i < mini else
-        mc.relative_humidity_from_mixing_ratio(wvmrtop, *tp)
-              for i, tp in enumerate(zip(T, pressures))]
+            mc.relative_humidity_from_mixing_ratio(wvmrtop, *tp)
+            for i, tp in enumerate(zip(T, pressures))]
 
     RH = concatenate(RH)
     return windx, mtny, windy, lcl_, LCL, T.to("degC"), RH
 
 
-def windh(val, maxht, xoffset=XPEAK, div=SHAPEFA, ratio=WINDMTRATIO, yoffset=WINDMTOFFSET, inv=False):
+def windh(
+        val,
+        maxht,
+        xoffset=XPEAK,
+        div=SHAPEFA,
+        ratio=WINDMTRATIO,
+        yoffset=WINDMTOFFSET,
+        inv=False):
     if inv:
         f = div * math.sqrt(maxht * ratio / (val - yoffset) - 1)
         return xoffset - f, xoffset + f
     return maxht * ratio / (1 + ((val - xoffset) / div) ** 2.) + yoffset
 
 
-# load the styles  
-external_css = ["https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css",
-                "/static/boxed.css",
-                "https://fonts.googleapis.com/css?family=Raleway:400,400i,700,700i",
-                "https://fonts.googleapis.com/css?family=Product+Sans:400,400i,700,700i"]
+# load the styles
+external_css = [
+    "https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css",
+    "/static/boxed.css",
+    "https://fonts.googleapis.com/css?family=Raleway:400,400i,700,700i",
+    "https://fonts.googleapis.com/css?family=Product+Sans:400,400i,700,700i"]
 for css in external_css:
     app.css.append_css({"external_url": css})
 

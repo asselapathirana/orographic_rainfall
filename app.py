@@ -89,7 +89,7 @@ slider1 = html.Div(
 slider2 = html.Div(
     [
         html.Div('Humidity of air (%)'),
-        dcc.Slider(
+        dcc.Slider( 
             id='humid',
             min=1,
             max=100,
@@ -435,7 +435,7 @@ for css in external_css:
     app.css.append_css({"external_url": css})
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, use_debugger=False, use_reloader=False)
     # d=calculate_set(3.897692586860594*1000, 25, 20)
     # d=calculate_set(1500, 25, 50)
     # d=calculate_set(1500, 30, 40)

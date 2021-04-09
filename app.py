@@ -3,9 +3,12 @@ import sys
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import plotly.graph_objs as go
+import dash_bootstrap_components as dbc
+#import plotly.graph_objs as go
 import math
 import json
+
+#from pint import UnitRegistry
 
 import numpy as np
 
@@ -14,7 +17,13 @@ from metpy.units import units, concatenate, check_units
 
 from itertools import cycle
 
-app = dash.Dash('Orographic rainfall demo app', static_folder='static')
+
+# load the styles
+external_stylesheets = [
+    "https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css",
+    "https://fonts.googleapis.com/css?family=Raleway:400,400i,700,700i",
+    "https://fonts.googleapis.com/css?family=Product+Sans:400,400i,700,700i"]
+app = dash.Dash('Orographic rainfall demo app', external_stylesheets=external_stylesheets)
 server = app.server
 value_range = [-5, 5]
 ANIM_DELTAT = 500
@@ -37,8 +46,7 @@ sym_ip = (30, 'hexagram', 'Ice precip.')
 sym_parcel = (50, 'y-right-open', 'Air parcel')
 
 banner = html.Div([
-    html.H2("Orographic rainfall demo"),
-    html.Img(src="/static/apLogo2.png"),
+    dbc.Card([html.H2("Orographic rainfall demo"), html.Img(src=app.get_asset_url("apLogo2.png")) ]),
 ], className='banner')
 
 row1 = html.Div([  # row 1 start ([
@@ -80,7 +88,7 @@ slider1 = html.Div(
             step=250,
             value=1500,
             marks={
-                i: i for i in range(
+                i: str(i) for i in range(
                     0,
                     MAXMNHT + 1,
                     1000)}),
@@ -96,7 +104,7 @@ slider2 = html.Div(
             step=5,
             value=40,
             marks={
-                i: i for i in range(
+                i: str(i) for i in range(
                     0,
                     100 + 1,
                     20)}),
@@ -108,14 +116,14 @@ slider3 = html.Div([html.Div('Temperature of air (°C)'),
                                max=50,
                                step=1,
                                value=30,
-                               marks={i: i for i in range(-20,
+                               marks={i: str(i) for i in range(-20,
                                                           50 + 1,
                                                           10)},
                                ),
                     ],
                    className="three columns",
                    )  # style={"margin-top": "25px"}
-button = html.Div([html.Button('Re-run', id='button'),
+button = html.Div([dbc.Button('Re-run', id='button'),
                    ], className="three columns", )
 
 row2 = html.Div([  # begin row 2
@@ -180,6 +188,8 @@ def calculate_set(height, temp, humid):
      ]
 )
 def update_RHElGraph(counterval, calculation_store_data):
+    if not calculation_store_data:
+        raise dash.exceptions.PreventUpdate
     windy, windx, mtny, TC, RH, trace, LCL = json.loads(calculation_store_data)
     length = min([counterval, len(XVALUES)])
 
@@ -209,6 +219,9 @@ def update_RHElGraph(counterval, calculation_store_data):
      ]
 )
 def update_TElGraph(counterval, calculation_store_data):
+    if not calculation_store_data:
+        raise dash.exceptions.PreventUpdate
+        
     windy, windx, mtny, TC, RH, trace, LCL = json.loads(calculation_store_data)
     length = min([counterval, len(XVALUES)])
     tr = [min(TC) - 2, max(TC) + 2]
@@ -238,6 +251,8 @@ def update_TElGraph(counterval, calculation_store_data):
      ]
 )
 def update_mainGraph(counterval, calculation_store_data):
+    if not calculation_store_data:
+        raise dash.exceptions.PreventUpdate    
     windy, windx, mtny, TC, RH, trace, LCL = json.loads(calculation_store_data)
     length = min([counterval, len(XVALUES)])
     x = [windx[length - 1]]
@@ -269,6 +284,7 @@ def update_mainGraph(counterval, calculation_store_data):
 
 
 def saveCalc(height, temp, humid):
+      
     windx, mtny, windy, lcl_, LCL, TC, RH = atmCalc(height, temp, humid)
     # now remove the first item from all (first x value is far away in negative!)
     windx=windx[1:]
@@ -367,7 +383,7 @@ def atmCalc(height, temp, humid):
 
     temp_ = temp * units.degC
     initp = mc.height_to_pressure_std(windy[0] * units.meters)
-    dewpt = mc.dewpoint_rh(temp_, humid / 100.)
+    dewpt = mc.dewpoint_from_relative_humidity(temp_, humid / 100.)
     lcl_ = mc.lcl(initp, temp_, dewpt, max_iters=50, eps=1e-5)
     LCL = mc.pressure_to_height_std(lcl_[0])
 
@@ -380,7 +396,7 @@ def atmCalc(height, temp, humid):
 
     pressures = mc.height_to_pressure_std(windy * units.meters)
 
-    wvmr0 = mc.mixing_ratio_from_relative_humidity(humid / 100., temp_, initp)
+    wvmr0 = mc.mixing_ratio_from_relative_humidity(initp, temp_, humid / 100.)
 
     # now calculate the air parcel temperatures and RH at each position
     if (lcl_[0] <= min(pressures)):
@@ -401,11 +417,21 @@ def atmCalc(height, temp, humid):
         T2 = mc.dry_lapse(p2, T1[-1])
         T = concatenate((T1, T2[1:]))
         wvmrtop = mc.saturation_mixing_ratio(pressures[mini], T[mini])
-
-        RH = [mc.relative_humidity_from_mixing_ratio(wvmr0, *tp) if tp[1] > lcl_[
-            0] and i <= mini else 1.0 if i < mini else
-            mc.relative_humidity_from_mixing_ratio(wvmrtop, *tp)
-            for i, tp in enumerate(zip(T, pressures))]
+        RH=[]
+        for i in range(len(pressures)):
+            if pressures[i] > lcl_[0] and i <= mini:
+                v=mc.relative_humidity_from_mixing_ratio(pressures[i], T[i], wvmr0)
+            else:
+                if i < mini:
+                    v=1
+                else:
+                    v=mc.relative_humidity_from_mixing_ratio(pressures[i], T[i], wvmrtop)
+            RH.append(v)
+        
+        #RH = [mc.relative_humidity_from_mixing_ratio(*tp, wvmr0) if tp[1] > lcl_[
+            #0] and i <= mini else 1.0 if i < mini else
+            #mc.relative_humidity_from_mixing_ratio(*tp, wvmrtop)
+            #for i, tp in enumerate(zip(pressures, T))]
 
     RH = concatenate(RH)
     return windx, mtny, windy, lcl_, LCL, T.to("degC"), RH
@@ -425,14 +451,7 @@ def windh(
     return maxht * ratio / (1 + ((val - xoffset) / div) ** 2.) + yoffset
 
 
-# load the styles
-external_css = [
-    "https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css",
-    "/static/boxed.css",
-    "https://fonts.googleapis.com/css?family=Raleway:400,400i,700,700i",
-    "https://fonts.googleapis.com/css?family=Product+Sans:400,400i,700,700i"]
-for css in external_css:
-    app.css.append_css({"external_url": css})
+
 
 if __name__ == '__main__':
     app.run_server(debug=True, use_debugger=False, use_reloader=False)
